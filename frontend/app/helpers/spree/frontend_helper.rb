@@ -221,6 +221,43 @@ module Spree
       set.join(', ')
     end
 
+    def resolution_asset_path(filename, resolution, type = 'jpg')
+      if resolution == '1x'
+        asset_path("#{filename}.#{type}") + ' ' + resolution
+      else
+        asset_path("#{filename}@#{resolution}.#{type}") + ' ' + resolution
+      end
+    end
+
+    def responsive_image(name, class_name = '', alt = '', type = 'jpg')
+      widths = {
+        desktop: '1200',
+        tablet_landscape: '992',
+        tablet_portrait: '768',
+        mobile: '576'
+      }
+      set = []
+
+      widths.each do |key, value|
+        filename = key == :desktop ? name : "#{name}_#{key}"
+        srcset = ['1x', '2x', '3x']
+        srcset.map! do |resolution|
+          resolution_asset_path(filename, resolution, type)
+        end
+        srcset = srcset.join(', ')
+
+        if key == :mobile
+          set << tag.source(nil, type: "image/#{type}", srcset: srcset)
+        else
+          set << tag.source(nil, media: "(min-width: #{value}px)", type: "image/#{type}", srcset: srcset)
+        end
+      end
+
+      set << image_tag("#{name}.#{type}", srcset: image_source_array_set(name, type), class: class_name, alt: alt)
+
+      content_tag(:picture, raw(set.flatten.map(&:mb_chars).join))
+    end
+
     def taxons_tree(root_taxon, current_taxon, max_level = 1)
       return '' if max_level < 1 || root_taxon.leaf?
 
